@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<!--
+{% macro pagination(url, page) %}
+    <ul class="uk-pagination">
+        {% if page.has_previous %}
+            <li><a href="{{ url }}{{ page.page_index - 1 }}"><i class="uk-icon-angle-double-left"></i></a></li>
+        {% else %}
+            <li class="uk-disabled"><span><i class="uk-icon-angle-double-left"></i></span></li>
+        {% endif %}
+            <li class="uk-active"><span>{{ page.page_index }}</span></li>
+        {% if page.has_next %}
+            <li><a href="{{ url }}{{ page.page_index + 1 }}"><i class="uk-icon-angle-double-right"></i></a></li>
+        {% else %}
+            <li class="uk-disabled"><span><i class="uk-icon-angle-double-right"></i></span></li>
+        {% endif %}
+    </ul>
+{% endmacro %}
+-->
+<html>
+<head>
+    <meta charset="utf-8" />
+    {% block meta %}<!-- block meta  -->{% endblock %}
+    <title>all blogs - Awesome Python Webapp</title>
+    <link rel="stylesheet" href="/static/css/uikit.min.css">
+    <link rel="stylesheet" href="/static/css/uikit.gradient.min.css">
+    <link rel="stylesheet" href="/static/css/awesome.css" />
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/sha1.min.js"></script>
+    <script src="/static/js/uikit.min.js"></script>
+    <script src="/static/js/sticky.min.js"></script>
+    <script src="https://unpkg.com/vue@2.1.10/dist/vue.js"></script>
+	<script src="https://cdn.jsdelivr.net/vue.resource/1.0.3/vue-resource.min.js"></script>
+    <script src="/static/js/awesome.js"></script>
+	<script>		
+		function showError(err){
+			console.log('Error: ' + err.message);
+		}
+		
+		$(function(){
+			vm_list = new Vue({
+				el: '#vm-list',
+				data: {
+					blogs_list: [],
+					max_blogs: '',
+					pages: '',
+					page_index: 1,
+					user_id: '',
+					pages_num: ''
+				},
+				created: function(){
+					this.init();
+				},
+				methods: {
+					init: function(){
+						var that = this;
+						that.$resource('/api/blogs_list').get().then(function(resp){
+							resp.json().then(function(r){
+								that.blogs_list = r.blogs_list;
+								that.pages = r.pages;
+								that.max_blogs = r.max_blogs;
+								that.user_id = r.user_id;
+							});
+						}, showError);
+					},
+					
+					page: function(p){
+						var that = this;
+						that.page_index = parseInt(p);
+						that.$resource('/api/blogs_list').save({'page_index':that.page_index}).then(function(resp){
+							resp.json().then(function(r){
+								that.blogs_list = r.blogs_list;
+							});
+						}, showError);
+					},
+					
+					nextP: function(){
+						var that = this;
+						if(that.page_index < that.pages.length){
+							that.page_index++;
+						}
+						that.$resource('/api/blogs_list').save({'page_index':that.page_index}).then(function(resp){
+							resp.json().then(function(r){
+								that.blogs_list = r.blogs_list;
+							});
+						}, showError);
+					},
+					
+					lastP: function(){
+						var that = this;
+						if(that.page_index > 1){
+							that.page_index--;
+						}
+						that.$resource('/api/blogs_list').save({'page_index':that.page_index}).then(function(resp){
+							resp.json().then(function(r){
+								that.blogs_list = r.blogs_list;
+							});
+						}, showError);
+					},
+					
+					removeP: function(blog){
+						var that = this;
+						that.$resource('/manage/api/blogs_list/' + blog.id).delete().then(function(resp){
+							resp.json().then(function(r){
+								var target = -1;
+								for(let i=0; i < that.blogs_list.length; i++){
+									if(that.blogs_list[i].id === r.id){
+										target = i;
+										break;
+									}
+								}
+								
+								if(target !== -1){
+									that.blogs_list.splice(target, 1);
+								}
+							});
+						}, showError);
+						
+					}
+					
+				}
+			});
+			window.vm = vm_list;
+			
+			$('#last').click(function(){
+				vm.lastP();
+			});
+			$('#next').click(function(){
+				vm.nextP();
+			});
+			
+		});
+		function change_page(e){
+				var p = e.target.innerText;
+				vm.page(p);
+			}
+	</script>
+</head>
+<body>
+    <nav class="uk-navbar uk-navbar-attached uk-margin-bottom">
+        <div class="uk-container uk-container-center">
+            <a href="/" class="uk-navbar-brand">Awesome</a>
+            <ul class="uk-navbar-nav">
+                <li data-url="blogs"><a href="/"><i class="uk-icon-home"></i> 日志</a></li>
+                <li><a target="_blank" href="http://www.liaoxuefeng.com/wiki/0014316089557264a6b348958f449949df42a6d3a2e542c000"><i class="uk-icon-book"></i> 教程</a></li>
+                <li><a target="_blank" href="https://github.com/michaelliao/awesome-python3-webapp"><i class="uk-icon-code"></i> 源码</a></li>
+				{% if __user__.admin %}
+				<li><a target="_blank" href="/manage/blog_edit/0"><i class="uk-icon-edit"></i> create blog</a></li>
+				<li><a target="_blank" href="/manage/users"><i class="uk-icon-list"></i>users</a></li>
+				<li><a target="_blank" href="/manage/comments"><i class="uk-icon-comment"></i>comments</a></li>
+				{% endif %}
+				<li><a target="_blank" href="/blogs_list"><i class="uk-icon-list"></i> all blogs</a></li>
+            </ul>
+            <div class="uk-navbar-flip">
+                <ul class="uk-navbar-nav">
+                {% if __user__ %}
+                    <li class="uk-parent" data-uk-dropdown>
+                        <a href="/user/{{ __user__.id }}"><i class="uk-icon-user"></i> {{ __user__.name }}</a>
+                        <div class="uk-dropdown uk-dropdown-navbar">
+                            <ul class="uk-nav uk-nav-navbar">
+                                <li><a href="/signout"><i class="uk-icon-sign-out"></i> 登出</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                {% else %}
+                    <li><a href="/signin"><i class="uk-icon-sign-in"></i> 登陆</a></li>
+                    <li><a href="/register"><i class="uk-icon-edit"></i> 注册</a></li>
+                {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="uk-container uk-container-center">
+        <div class="uk-grid">
+			<div id="error" class="uk-width-1-1">
+			</div>
+			<div id="vm-list" class="uk-width-1-1">
+				{% if __user__.admin %}
+				<a href="/manage/blog_edit/0" class="uk-button uk-button-primary"><i class="uk-icon-plus"></i>new blog</a>
+				{% endif %}
+				<table class="uk-table uk-table-hover">
+					<thead>
+						<tr>
+							<th class="uk-width-5-10">titile/summary</th>
+							<th class="uk-width-2-10">author</th>
+							<th class="uk-width-2-10">created at</th>
+							{% if __user__.admin %}
+							<th class="uk-width-1-10">operating</th>
+							{% endif %}
+						</tr>
+					</thead>
+					<tbody>
+						<tr v-for="blog in blogs_list">
+							<td>
+								<a target="_blank" v-bind:href="'/blog/'+blog.id" v-text="blog.name"></a>
+							</td>
+							<td>
+								<a target="_blank" v-bind:href="'/user/'+blog.user_id" v-text="blog.user_name"></a>
+							</td>
+							<td>
+								<span v-text="new Date(blog.created_at*1000)"></span>
+							</td>
+							{% if __user__.admin %}
+							<td>
+								<a v-bind:href="'/blog_edit/'+blog.id"><i class="uk-icon-edit"></i></a>
+								<a href="#0" v-on:click="removeP(blog)"><i class="uk-icon-trash-o"></i></a>
+							</td>
+							{% endif %}
+						</tr>
+					</tbody>
+				</table>
+				<!--<div v-for="blog in blogs_list">
+					<article class="uk-article">
+						<h2><a v-bind:href="'/blog/'+blog.id" v-text="blog.name"></a></h2>
+						<p class="uk-article-meta" v-text="'created at '+ (new Date(blog.created_at*1000))"></p>
+						<p v-text="blog.summary"></p>
+						<p><a v-bind:href="'/blog/'+blog.id">read more<i class="uk-icon-angle-double-right"></i></a></p>
+						<p><span><a href="#0" v-on:click="removeP(blog)">Delete </a><a v-bind:href="'/blog_edit/'+blog.id">Edit</a></span></p>
+					</article>
+					<hr class="uk-article-divider">
+				</div>-->
+				<div align="center">
+					<div class="uk-button-group">
+						<a id="last" class="uk-button uk-button-default uk-button-small"><i class="uk-icon-angle-double-left"></i></a>
+						<div id="page" v-for="p in pages">
+							<a onclick="change_page(event)" class="uk-button uk-button-link uk-button-small" v-text=" p "></a>
+						</div>
+						<a id="next" class="uk-button uk-button-default uk-button-small"><i class="uk-icon-angle-double-right"></i></a>
+					</div>
+				</div>
+			</div>
+		</div>
+    </div>
+
+    <div class="uk-margin-large-top" style="background-color:#eee; border-top:1px solid #ccc;">
+        <div class="uk-container uk-container-center uk-text-center">
+            <div class="uk-panel uk-margin-top uk-margin-bottom">
+                <p>
+                    <a target="_blank" href="http://weibo.com/liaoxuefeng" class="uk-icon-button uk-icon-weibo"></a>
+                    <a target="_blank" href="https://github.com/michaelliao" class="uk-icon-button uk-icon-github"></a>
+                    <a target="_blank" href="http://www.linkedin.com/in/liaoxuefeng" class="uk-icon-button uk-icon-linkedin-square"></a>
+                    <a target="_blank" href="https://twitter.com/liaoxuefeng" class="uk-icon-button uk-icon-twitter"></a>
+                </p>
+                <p>Powered by <a href="http://awesome.liaoxuefeng.com">Awesome Python Webapp</a>. Copyright &copy; 2014. [<a href="/manage/" target="_blank">Manage</a>]</p>
+                <p><a href="http://www.liaoxuefeng.com/" target="_blank">www.liaoxuefeng.com</a>. All rights reserved.</p>
+                <a target="_blank" href="http://www.w3.org/TR/html5/"><i class="uk-icon-html5" style="font-size:64px; color: #444;"></i></a>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>

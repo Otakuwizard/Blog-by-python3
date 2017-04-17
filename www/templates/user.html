@@ -1,0 +1,14 @@
+{% extends "__base__.html" %}
+{% block title %}{{ user.name }}{% endblock %}
+{% block content %}
+<div class="uk-width-medium-1-4">
+	<img src="{{ user.image }}" alt="user" style="width:100%; height:100%;">
+</div>
+<div class="uk-width-medium-3-4">
+	<ul class="uk-list uk-list-striped">
+		<li>user: {{ user.name }}</li>
+		<li>email: {{ user.email }}</li>
+		<li>created at: {{ user.created_at|datetime }}</li>
+	</ul>
+</div>
+{% endblock %}

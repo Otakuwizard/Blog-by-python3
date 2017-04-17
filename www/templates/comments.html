@@ -1,0 +1,112 @@
+{% extends "__base__.html" %}
+{% block title %}
+Comments
+{% endblock %}
+
+{% block beforehead %}
+<script>
+	$(function(){
+		var vm = new Vue({
+			el: '#vm-comments',
+			data: {
+				comments: []
+			},
+			created: function(){
+				this.init();
+			},
+			methods: {
+				init: function(){
+					var that = this;
+					that.$resource('/manage/api/comments').get().then(function(resp){
+						resp.json().then(function(r){
+							that.comments = r.commentsByBlog;
+						});
+					}, function(err){
+						console.log('[ERROR]:'+err.message);
+					});
+					$('#vm-comments table').hide();
+				},
+				
+				toggle: function(comment){
+					var blog_id = comment.blog_id
+					if(comment.content)
+						$('#vm-comments table#'+blog_id).toggle('fast');
+					//$('#vm-comments table').toggle();
+					if($('#icon'+blog_id).attr('class') === 'uk-icon-plus-circle'){
+						$('#icon'+blog_id).attr('class', 'uk-icon-minus-circle');
+					}else{
+						$('#icon'+blog_id).attr('class', 'uk-icon-plus-circle');
+					}
+				},
+				
+				remove: function(comment_id, blog_id){
+					var that = this;
+					that.$resource('/manage/api/comment/'+comment_id).delete().then(function(resp){
+						resp.json().then(function(r){
+							console.log(r.content);
+						});
+					}, function(err){
+						console.log('[ERROR]: '+err.message);
+					});
+					var targetB = -1;
+					var targetC = -1;
+					for(let i in that.comments){
+						if(that.comments[i][0].blog_id === blog_id){
+							targetB = i;
+							for(let j in that.comments[i]){
+								if(that.comments[i][j].id === comment_id){
+									targetC = j;
+								}
+								break;
+							}
+						}
+					}
+					if(that.comments[targetB].length > 1){
+						that.comments[targetB].splice(targetC, 1);
+							that.comments[targetB][0].blog_count = that.comments[targetB].length;
+					}else{
+						var blog_name = that.comments[targetB][0].blog_name;
+						that.comments[targetB].splice(targetC, 1, {
+							blog_name: blog_name,
+							blog_count: 0
+						});
+					}
+				}
+			}
+		});
+		window.vm = vm;
+	});
+</script>
+{% endblock %}
+{% block content %}
+<div id="vm-comments" class="uk-width-1-1">
+	<ul class="uk-list uk-list-large uk-list-striped">
+		<li v-for="Blog in comments">
+			<dl>
+				<dt><h3><a v-text="Blog[0].blog_name" v-bind:href="'/blog/'+Blog[0].blog_id"></a></h3></dt>
+				<dd><a v-on:click="toggle(Blog[0])" href="#0"><i v-bind:id="'icon'+Blog[0].blog_id" class="uk-icon-plus-circle"></i> <label v-text="Blog[0].blog_count + ' comments left'"></label></a></dd>
+				<dd>
+					<table v-bind:id="Blog[0].blog_id" class="uk-table uk-table-middle">
+						<thead>
+							<tr>
+								<th class="uk-width-3-10">User</th>
+								<th class="uk-width-5-10">comment</th>
+								<th class="uk-width-2-10">delete</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr v-for="comment in Blog">
+								<td><a v-bind:href="'/user/'+comment.user_id" v-text="comment.user_name"></a></td>
+								<td v-text="comment.content"></td>
+								<td>
+									<a href="#0" v-on:click="remove(comment.id, comment.blog_id)"><i class="uk-icon-trash-o"></i></a>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</dd>
+			</dl>
+		</li>
+	</ul>
+</div>
+{% endblock %}

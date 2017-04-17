@@ -1,0 +1,84 @@
+{% extends "__base__.html" %}
+{% block title %}{{ blog.name }}{% endblock %}
+
+{% block beforehead %}
+<script>
+	var b_id = '{{ blog.id }}';
+	$(function(){
+		var vm = new Vue({
+			el: '#comment-form',
+			data: {
+				content: '',
+				blog_id: b_id
+			},
+			methods: {
+				submit: function(e){
+					e.preventDefault();
+					var that = this;
+					$form = $('#comment-form');
+					$form.postJSON('/api/comment', that.$data, function(err, r){
+						if(err){
+							console.log('[ERROR]: ' + err.message);
+						}else{
+							location.assign('/blog/'+that.blog_id);
+						}
+					});
+				},
+			}
+		});
+		
+		window.vm = vm;
+	});
+	
+	function remove(comment_id){
+		$.ajax('/manage/api/comment/'+comment_id, {
+			dataType: 'json',
+			method: 'DELETE',
+			contentType: 'application/json'
+		}).done(function(data){
+			location.assign('/blog/'+b_id);
+		}).fail(function(xhr, status){
+			console.log('[ERROR]: ' + status)
+		});
+	}
+</script>
+{% endblock %}
+{% block content%}
+
+<div id="error" class="uk-width-1-1">
+</div>
+
+<div class="uk-width-2-3">
+	<div class="uk-article">
+		<h2>{{ blog.name }}</h2>
+		<p class="uk-article-meta">created at {{ blog.created_at|datetime }}</p>
+		<p>{{ blog.content }}</p>
+	</div>
+	{% if __user__.admin %}
+	<p><a href="/manage/blog_edit/{{ blog.id }}">Edit</a></p>
+	{% endif %}
+	<p><h3>Comment</h3></p>
+	<ul class="uk-list uk-list-large uk-list-striped">
+	{% for comment in comments %}
+		<li >
+			<dl>
+				<dt><a href="/user/{{ comment.user_id }}"><i class="uk-icon-user"></i> {{ comment.user_name }}</a></dt>
+				<dd><br></dd>
+				<dd><h5>{{ comment.content }}</h5></dd>
+				<dd><h6>created at {{ comment.created_at|datetime }}</h6></dd>
+				{% if __user__.admin %}
+				<dd><a id="remove" href="#0" onclick="remove('{{comment.id}}')">Delete</a></dd> 
+				{% endif %}
+			</dl>
+		</li>
+	{% endfor %}
+	</ul>
+	<h3>Create your comment</h3>
+	<form id="comment-form" class="uk-form uk-form-stacked" v-on:submit="submit">
+		<div class="uk-alert uk-alert-danger uk-hidden"></div>
+		<textarea class="uk-width-1-1" rows=4 name="content" type="text" style="resize:none;" placeholder="..." v-model="content"></textarea>
+		<button type="submit" class="uk-button uk-button-primary"><i class="uk-icon-save"></i>save</button>
+	</form>
+</div>
+
+{% endblock %}
